@@ -6,14 +6,14 @@
 #include <vector>
 #include <condition_variable>
 #include <mutex>
+#include <atomic>
 
 #include "page.h"
 
 class MemoryManager
 {
 public:
-    MemoryManager(size_t numPages, size_t k, unsigned int timeout);
-    ~MemoryManager();
+    MemoryManager(size_t maxPages, size_t k, unsigned int timeout);
 
     void store(std::string id, unsigned int value);
     void release(std::string id);
@@ -30,12 +30,23 @@ private:
         Lookup
     };
 
-    Operation nextOperation;
-    std::string nextId;
-    unsigned int nextValue;
-    bool readyForData;
-    std::condition_variable signal;
-    std::mutex extMutex;
+    void submitRequest(Operation op, std::string id, unsigned int value = 0);
+    
+    const size_t maxPages;
+    const size_t k;
+    const unsigned int timeout;
+
+    Operation requestOperation;
+    std::string requestId;
+    unsigned int requestValue;
+    std::atomic_bool readyForRequest;
+    std::condition_variable requestSignal;
+    std::mutex requestMutex;
+
+    unsigned int responseValue;
+    std::atomic_bool responseAvailable;
+    std::condition_variable responseSignal;
+    std::mutex responseMutex;
 
     std::vector<Page> mainMemory;
     std::map<std::string, unsigned int> last;
