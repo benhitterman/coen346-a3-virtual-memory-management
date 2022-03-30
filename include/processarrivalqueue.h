@@ -2,7 +2,6 @@
 #define PROCESS_ARRIVAL_QUEUE_H
 
 #include <queue>
-
 #include "process.h"
 #include "arrivaltimecompare.h"
 class ProcessArrivalQueue

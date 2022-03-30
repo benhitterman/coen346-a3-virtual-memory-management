@@ -5,9 +5,10 @@
 #include <map>
 #include <thread>
 #include <atomic>
-
+#include <fstream>
 #include "process.h"
 #include "processarrivalqueue.h"
+#include "clock.h"
 
 class Scheduler
 {
