@@ -1,66 +1,56 @@
 #include "include/memorymanager.h"
 
+#include <thread>
+
+#include "include/clock.h"
+
 MemoryManager::MemoryManager(size_t maxPages, size_t k, unsigned int timeout)
     : maxPages(maxPages)
     , k(k)
     , timeout(timeout)
-    , readyForRequest(false)
-    , responseAvailable(false)
 {
 }
 
 void MemoryManager::store(std::string id, unsigned int value)
 {
-    submitRequest(Operation::Store, id, value);
-    requestSignal.notify_all();
+    std::lock_guard lock(requestMutex);
+    requestQueue.push(Request(Request::Operation::Store, id, value));
 }
 
 void MemoryManager::release(std::string id)
 {
-    submitRequest(Operation::Release, id);
-    requestSignal.notify_all();
+    std::lock_guard lock(requestMutex);
+    requestQueue.push(Request(Request::Operation::Release, id));
 }
 
 unsigned int MemoryManager::lookup(std::string id)
 {
-    submitRequest(Operation::Lookup, id);
+    std::unique_lock requestLock(requestMutex);
 
-    // Create our response lock before notifying of a request to ensure that we begin waiting before a response can be generated
-    std::unique_lock lock(responseMutex);
-    requestSignal.notify_all();
+    requestQueue.push(Request(Request::Operation::Lookup, id));
+    requestLock.unlock();
 
-    responseSignal.wait(lock, [this](){ return responseAvailable == true; });
-    return responseValue;
-}
-
-void MemoryManager::submitRequest(Operation op, std::string id, unsigned int value = 0)
-{
-    // Lock the mutex allowing us to set the request parameters
-    std::unique_lock lock(requestMutex);
-    // If we receive the lock but readyForRequest is false then the memory manager is occupied, so wait
-    if (!readyForRequest)
+    while (true)
     {
-        requestSignal.wait(lock, [this](){ return readyForRequest == true; });
+        std::lock_guard responseLock(responseMutex);
+        for (size_t i = 0; i < responseList.size(); i++)
+        {
+            if (responseList[i].getId() == id)
+            {
+                return responseList[i].getValue();
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));      
     }
-
-    // Set parameters for the request then indicate that nobody else should set anything
-    requestOperation = op;
-    requestId = id;
-    requestValue = value;
-    readyForRequest = false;
 }
 
 void MemoryManager::start()
 {
+    constexpr auto swapFile = "vm.txt";
+
+    auto& clock = Clock::getInstance();
     while (true) // TODO: Stop flag
     {
-        std::unique_lock lock(requestMutex);
-        requestSignal.wait(lock, [this](){ return readyForRequest == false; });
-
-        // TODO: Handle request
-
-        readyForRequest = true;
-        lock.unlock();
-        requestSignal.notify_all();
+        
     }
 }

@@ -1,14 +1,15 @@
 #ifndef MEMORY_MANAGER_H
 #define MEMORY_MANAGER_H
 
-#include <string>
 #include <map>
-#include <vector>
-#include <condition_variable>
 #include <mutex>
-#include <atomic>
+#include <queue>
+#include <string>
+#include <vector>
 
 #include "page.h"
+#include "request.h"
+#include "response.h"
 
 class MemoryManager
 {
@@ -23,29 +24,14 @@ public:
     void start();
 
 private:
-    enum Operation
-    {
-        Store,
-        Release,
-        Lookup
-    };
-
-    void submitRequest(Operation op, std::string id, unsigned int value = 0);
-    
     const size_t maxPages;
     const size_t k;
     const unsigned int timeout;
 
-    Operation requestOperation;
-    std::string requestId;
-    unsigned int requestValue;
-    std::atomic_bool readyForRequest;
-    std::condition_variable requestSignal;
     std::mutex requestMutex;
+    std::queue<Request> requestQueue;
 
-    unsigned int responseValue;
-    std::atomic_bool responseAvailable;
-    std::condition_variable responseSignal;
+    std::vector<Response> responseList;
     std::mutex responseMutex;
 
     std::vector<Page> mainMemory;
