@@ -24,6 +24,10 @@ public:
     void start();
 
 private:
+    void handleStore(Request& r);
+    void handleRelease(Request& r);
+    Response handleLookup(Request& r);
+
     const size_t maxPages;
     const size_t k;
     const unsigned int timeout;
@@ -31,8 +35,8 @@ private:
     std::mutex requestMutex;
     std::queue<Request> requestQueue;
 
-    std::vector<Response> responseList;
     std::mutex responseMutex;
+    std::vector<Response> responseList;
 
     std::vector<Page> mainMemory;
     std::map<std::string, unsigned int> last;

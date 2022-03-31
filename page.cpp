@@ -14,3 +14,9 @@ unsigned int Page::getValue() const
 {
     return std::get<1>(pair);
 }
+
+std::ostream& operator<<(std::ostream& out, const Page& p)
+{
+    out << p.getId() << ' ' << p.getValue();
+    return out;
+}

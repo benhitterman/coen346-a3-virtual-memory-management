@@ -40,7 +40,7 @@ unsigned int MemoryManager::lookup(std::string id)
                 return responseList[i].getValue();
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));      
+        std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));
     }
 }
 
@@ -51,6 +51,26 @@ void MemoryManager::start()
     auto& clock = Clock::getInstance();
     while (true) // TODO: Stop flag
     {
-        
+        std::unique_lock requestLock(requestMutex);
+        if (!requestQueue.empty())
+        {
+            Request r = requestQueue.front();
+            requestQueue.pop();
+            requestLock.unlock();
+
+            switch (r.getOperation())
+            {
+                case Request::Operation::Store:
+                case Request::Operation::Release:
+                case Request::Operation::Lookup:
+                default:
+                    break;
+            }
+        }
     }
+}
+
+void MemoryManager::handleStore(Request& r)
+{
+    
 }

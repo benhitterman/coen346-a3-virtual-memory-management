@@ -20,4 +20,4 @@ public:
     Scheduler(ProcessArrivalQueue &queue);
     void operator()(std::atomic_bool &stopFlag);
 };
-#endif;
+#endif

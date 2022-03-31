@@ -3,6 +3,7 @@
 
 #include <string>
 
+// Represents a response from the memory manager to a lookup request.
 class Response
 {
 public:

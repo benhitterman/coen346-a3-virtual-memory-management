@@ -1,6 +1,6 @@
 #include "include/request.h"
 
-Request::Request(Operation op, std::string id, unsigned int value = 0)
+Request::Request(Operation op, std::string id, unsigned int value)
     : operation(op)
     , id(id)
     , value(value)
