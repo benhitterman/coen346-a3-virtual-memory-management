@@ -1,8 +1,11 @@
 #include "include/memorymanager.h"
 
 #include <thread>
+#include <fstream>
 
 #include "include/clock.h"
+
+constexpr auto swapFile = "vm.txt";
 
 MemoryManager::MemoryManager(size_t maxPages, size_t k, unsigned int timeout)
     : maxPages(maxPages)
@@ -37,7 +40,9 @@ unsigned int MemoryManager::lookup(std::string id)
         {
             if (responseList[i].getId() == id)
             {
-                return responseList[i].getValue();
+                auto retVal = responseList[i].getValue();
+                responseList.erase(responseList.begin() + i);
+                return retVal;
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));
@@ -46,8 +51,6 @@ unsigned int MemoryManager::lookup(std::string id)
 
 void MemoryManager::start()
 {
-    constexpr auto swapFile = "vm.txt";
-
     auto& clock = Clock::getInstance();
     while (true) // TODO: Stop flag
     {
@@ -61,7 +64,11 @@ void MemoryManager::start()
             switch (r.getOperation())
             {
                 case Request::Operation::Store:
+                    handleStore(r);
+                    break;
                 case Request::Operation::Release:
+                    handleRelease(r);
+                    break;
                 case Request::Operation::Lookup:
                 default:
                     break;
@@ -72,5 +79,45 @@ void MemoryManager::start()
 
 void MemoryManager::handleStore(Request& r)
 {
-    
+    Page newPage(r.getId(), r.getValue());
+    if (mainMemory.size() < maxPages)
+    {
+        mainMemory.push_back(newPage);
+    }
+    else
+    {
+        std::fstream pageFile(swapFile, std::ios_base::app);
+        pageFile << newPage << std::endl;
+    }
+}
+
+void MemoryManager::handleRelease(Request& r)
+{
+    for (size_t i = 0; i < mainMemory.size(); i++)
+    {
+        if (mainMemory[i].getId() == r.getId())
+        {
+            mainMemory.erase(mainMemory.begin() + i);
+            return;
+        }
+    }
+
+    std::fstream pageFile(swapFile);
+
+    std::vector<std::string> tempBuffer;
+    std::string line;
+    while (std::getline(pageFile, line))
+    {
+        size_t space = line.find(' ');
+        if (line.substr(0, space) != r.getId())
+        {
+            tempBuffer.push_back(line);
+        }
+    }
+
+    pageFile.seekp(0);
+    for (auto& i : tempBuffer)
+    {
+        pageFile << i << std::endl;
+    }
 }
