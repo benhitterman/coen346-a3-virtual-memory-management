@@ -14,7 +14,7 @@
 class MemoryManager
 {
 public:
-    MemoryManager(size_t maxPages, size_t k, unsigned int timeout);
+    MemoryManager(size_t maxPages, size_t k, int timeout);
 
     void store(std::string id, unsigned int value);
     void release(std::string id);
@@ -28,9 +28,12 @@ private:
     void handleRelease(Request& r);
     Response handleLookup(Request& r);
 
+    void updateTimestamps(Page& p);
+    size_t findVictimIndex();
+
     const size_t maxPages;
     const size_t k;
-    const unsigned int timeout;
+    const int timeout;
 
     std::mutex requestMutex;
     std::queue<Request> requestQueue;
@@ -39,8 +42,8 @@ private:
     std::vector<Response> responseList;
 
     std::vector<Page> mainMemory;
-    std::map<std::string, unsigned int> last;
-    std::map<std::string, std::vector<unsigned int>> hist;
+    std::map<std::string, int> last;
+    std::map<std::string, std::vector<int>> hist;
 };
 
 #endif
