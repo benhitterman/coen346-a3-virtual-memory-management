@@ -12,7 +12,7 @@ void Scheduler::operator()(std::atomic_bool &stopFlag)
     outFile.open("output.txt");
     auto active = &arrivalQueue;
 
-    while (!arrivalQueue.empty() && arrivalQueue.peek()->getArrivalTime() == 0)
+    while (!arrivalQueue.empty() && arrivalQueue.peek()->getstartTime() == 0)
     {
         Process *p = arrivalQueue.pop();
     }

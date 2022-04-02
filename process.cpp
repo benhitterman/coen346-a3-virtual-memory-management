@@ -1,17 +1,17 @@
 #include "include/process.h"
 
-Process::Process(std::string name, int arrivalTime, int burstTime)
-    : name(name), arrivalTime(arrivalTime), burstTime(burstTime)
+Process::Process(int name, int startTime, int burstTime)
+    : name(name), startTime(startTime), burstTime(burstTime)
 {
 }
-const std::string &Process::getName() const
+int Process::getName() const
 {
     return name;
 }
 
-int Process::getArrivalTime() const
+int Process::getstartTime() const
 {
-    return arrivalTime;
+    return startTime;
 }
 
 int Process::getBurstTime() const

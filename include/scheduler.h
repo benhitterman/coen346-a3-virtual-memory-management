@@ -14,7 +14,7 @@ class Scheduler
 {
 private:
     ProcessArrivalQueue arrivalQueue;
-    std::map<std::string, std::thread *> processThreads;
+    std::map<int, std::thread *> processThreads;
 
 public:
     Scheduler(ProcessArrivalQueue &queue);
