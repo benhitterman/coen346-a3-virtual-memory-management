@@ -74,9 +74,20 @@ void MemoryManager::start()
                     handleRelease(r);
                     break;
                 case Request::Operation::Lookup:
-                default:
+                {
+                    Response resp = handleLookup(r);
+                    std::lock_guard(responseMutex);
+                    responseList.push_back(resp);
                     break;
+                }
+                default:
+                    throw std::domain_error("Request has invalid operation type");
             }
+        }
+        else
+        {
+            requestLock.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));
         }
     }
 }
@@ -166,8 +177,40 @@ Response MemoryManager::handleLookup(Request& r)
     // We found the target in the page file, now we need to swap
     if (targetIndex != std::numeric_limits<size_t>::max())
     {
-        
+        size_t victimIndex = findVictimIndex();
+
+        // Create a new page object from the page to be moved into main memory then erase the line from the temp buffer.
+        std::string targetLine = tempBuffer[targetIndex];
+        size_t space = targetLine.find(' ');
+        Page newPage(targetLine.substr(0, space), stoi(targetLine.substr(space + 1)));
+        tempBuffer.erase(tempBuffer.begin() + targetIndex);
+
+        // Add the victim to the temp buffer and erase it from main memory.
+        std::stringstream sstream;
+        sstream << mainMemory[victimIndex];
+        tempBuffer.push_back(sstream.str());
+        mainMemory.erase(mainMemory.begin() + victimIndex);
+
+        // Add the new page to main memory.
+        mainMemory.push_back(newPage);
+        int now = Clock::getInstance().getTime();
+        last[newPage.getId()] = now;
+        std::vector<int> newPageHist(k, 0);
+        newPageHist[0] = now;
+        hist[newPage.getId()] = newPageHist;
+
+        // Write the temp buffer back into the file on disk.
+        pageFile.seekp(0);
+        for (auto& i : tempBuffer)
+        {
+            pageFile << i << std::endl;
+        }
+
+        return Response(newPage.getId(), newPage.getValue());
     }
+
+    // If the id wasn't found in main memory or in the page file, return -1.
+    return Response(r.getId(), -1);
 }
 
 void MemoryManager::updateTimestamps(Page& p)
@@ -192,5 +235,57 @@ void MemoryManager::updateTimestamps(Page& p)
 
 size_t MemoryManager::findVictimIndex()
 {
-    
+    // Determine if any pages satisfy [last - hist(1) > timeout]
+    bool anyTimeout = false;
+    size_t firstIndex;
+    for (size_t i = 0; i < mainMemory.size(); i++)
+    {
+        auto id = mainMemory[i].getId();
+        if (last[id] - hist[id][0] > timeout)
+        {
+            anyTimeout = true;
+            firstIndex = i;
+            break;
+        }
+    }
+
+    if (anyTimeout)
+    {
+        // Of all pages satisfying [last - hist(1) > timeout], choose the one with the minimum value of hist(k)
+        size_t victimIndex = firstIndex;
+        for (size_t i = victimIndex + 1; i < mainMemory.size(); i++)
+        {
+            auto currentId = mainMemory[i].getId();
+            if (last[currentId] - hist[currentId][0] > timeout)
+            {
+                // If there is a tie in the values of hist(k), choose based on hist(1)
+                if (hist[currentId][k - 1] < hist[mainMemory[victimIndex].getId()][k - 1])
+                {
+                    victimIndex = i;
+                }
+                else if (hist[currentId][k - 1] == hist[mainMemory[victimIndex].getId()][k - 1])
+                {
+                    if (hist[currentId][0] < hist[mainMemory[victimIndex].getId()][0])
+                    {
+                        victimIndex = i;
+                    }
+                }
+            }
+        }
+        return victimIndex;
+    }
+    else
+    {
+        // If no pages satisfy [last - hist(1) > timeout], choose the one with the minimum value of hist(1)
+        size_t victimIndex = 0;
+        for (size_t i = 1; i < mainMemory.size(); i++)
+        {
+            auto currentId = mainMemory[i].getId();
+            if (hist[currentId][0] < hist[mainMemory[victimIndex].getId()][0])
+            {
+                victimIndex = i;
+            }
+        }
+        return victimIndex;
+    }
 }
