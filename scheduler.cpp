@@ -21,8 +21,9 @@ void Scheduler::operator()(std::atomic_bool &stopFlag)
         while (!active->empty())
         {
 
-            Process *cpuProcess = arrivalQueue.pop(); // TODO to put pop_back (Checks first item at bottom of vector)
+            Process *cpuProcess = arrivalQueue.pop();
             outFile << "Clock: " << clock.getTime() << ", Process" << cpuProcess->getId() << ": Started" << std::endl;
+            std::thread(&Process::runNextCommand, *cpuProcess);
 
             while (clock.getTime() < cpuProcess->getBurstTime())
             {
