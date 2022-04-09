@@ -3,10 +3,11 @@
 #include "include/nextCommand.h"
 #include "include/memorymanager.h"
 
-class Process {
+class Process
+{
 public:
-    Process(int arrivalTime, int burstTime, nextCommand*, MemoryManager*);
-    Process(const Process& other);
+    Process(int id, int arrivalTime, int burstTime, nextCommand *, MemoryManager *);
+    Process(const Process &other);
 
     int getArrivalTime() const;
     int getBurstTime() const;
@@ -18,10 +19,9 @@ private:
     const int arrivalTime;
     const int burstTime;
     int id;
-    nextCommand* nc1;
-    MemoryManager* mm1;
+    nextCommand *nc1;
+    MemoryManager *mm1;
     bool isTerminated;
 };
-
 
 #endif

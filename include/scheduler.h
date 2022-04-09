@@ -14,12 +14,13 @@ class Scheduler
 {
 private:
     ProcessArrivalQueue arrivalQueue;
-    std::queue<Process*> readyQueue;
-    std::vector<Process*> runningProcesses;
+    std::queue<Process *> readyQueue;
+    std::vector<Process *> runningProcesses;
     std::map<int, std::thread *> processThreads;
+    int numCores;
 
 public:
-    Scheduler(ProcessArrivalQueue &queue);
+    Scheduler(ProcessArrivalQueue &queue, int numCores);
     void operator()(std::atomic_bool &stopFlag);
 };
 #endif
