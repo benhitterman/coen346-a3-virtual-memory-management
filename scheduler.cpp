@@ -10,25 +10,31 @@ void Scheduler::operator()(std::atomic_bool &stopFlag)
     Clock &clock = Clock::getInstance();
     std::ofstream outFile;
     outFile.open("output.txt");
-    auto active = &arrivalQueue;
 
     while (!arrivalQueue.empty() && arrivalQueue.peek()->getArrivalTime() == 0)
     {
-        Process *p = arrivalQueue.pop();
+        Process *p = arrivalQueue.peek();
+        arrivalQueue.pop();
+        readyQueue.push(p);
     }
     while (!stopFlag)
     {
-        while (!active->empty())
+        // Check for new processes to start
+        if (!readyQueue.empty() && runningProcesses.size() < numCores)
         {
+            Process *cpuProcess = readyQueue.front();
+            readyQueue.pop();
 
-            Process *cpuProcess = arrivalQueue.pop();
             outFile << "Clock: " << clock.getTime() << ", Process" << cpuProcess->getId() << ": Started" << std::endl;
-            std::thread(&Process::runNextCommand, *cpuProcess);
+            runningProcesses.push_back(cpuProcess);
+            processThreads[cpuProcess->getId()] = new std::thread(&Process::runNextCommand, *cpuProcess);
+        }
 
-            while (clock.getTime() < cpuProcess->getBurstTime())
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));
-            }
+        // Check if any running process are finished
+        for (auto p : runningProcesses)
+        {
+            // TODO CHECK IF PROCESS IS TERMINATED
+
 
             // Join and delete the thread created to run the process
             outFile << "Clock: " << clock.getTime() << ", Process" << cpuProcess->getId() << ": Finished" << std::endl;
@@ -39,5 +45,7 @@ void Scheduler::operator()(std::atomic_bool &stopFlag)
             // Delete the process itself
             delete cpuProcess;
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));
     }
 }
