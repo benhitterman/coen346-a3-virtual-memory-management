@@ -31,18 +31,27 @@ void Scheduler::operator()(std::atomic_bool &stopFlag)
         }
 
         // Check if any running process are finished
-        for (auto p : runningProcesses)
+        std::vector<size_t> terminatedIndices;
+        for (size_t i = 0; i < runningProcesses.size(); i++)
         {
-            if (p->getIsTerminated())
+            if (runningProcesses[i]->getIsTerminated())
             {
-                // Join and delete the thread created to run the process
-                outFile << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Finished" << std::endl;
-                processThreads[p->getId()]->join();
-                delete processThreads[p->getId()];
-                processThreads.erase(p->getId());
-                // Delete the process itself
-                delete p;
+                terminatedIndices.push_back(i);
             }
+        }
+        for (auto i : terminatedIndices)
+        {
+            Process* p = runningProcesses[i];
+            outFile << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Finished" << std::endl;
+
+            runningProcesses.erase(runningProcesses.begin() + i);
+
+            // Join and delete the thread created to run the process
+            processThreads[p->getId()]->join();
+            delete processThreads[p->getId()];
+            processThreads.erase(p->getId());
+            // Delete the process itself
+            delete p;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));
