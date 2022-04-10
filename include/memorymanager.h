@@ -1,6 +1,7 @@
 #ifndef MEMORY_MANAGER_H
 #define MEMORY_MANAGER_H
 
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <queue>
@@ -21,7 +22,7 @@ public:
     unsigned int lookup(std::string id);
 
     // Runs the memory manager. Should be started in a thread.
-    void start();
+    void start(std::atomic_bool& stopFlag);
 
 private:
     void handleStore(Request& r);

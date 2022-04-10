@@ -1,11 +1,13 @@
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <thread>
 #include <vector>
-#include "include/process.h"
 #include "include/clock.h"
-#include "include/scheduler.h"
-#include "include/nextCommand.h"
 #include "include/memorymanager.h"
+#include "include/nextCommand.h"
+#include "include/process.h"
+#include "include/scheduler.h"
+
 int main()
 {
     std::ifstream myfile;
@@ -49,6 +51,16 @@ int main()
     Clock &clock = Clock::getInstance();
     ProcessArrivalQueue queue(processList);
     Scheduler scheduler(queue, numOfCores);
+
+    std::atomic_bool stopFlag;
+    std::thread clockThread(&Clock::start, &clock);
+    std::thread memoryManagerThread(&MemoryManager::start, memory, std::ref(stopFlag));
+    std::thread schedulerThread(&Scheduler::start, &scheduler, std::ref(stopFlag));
+
+    clockThread.join();
+    stopFlag = true;
+    memoryManagerThread.join();
+    schedulerThread.join();
 
     return 0;
 }

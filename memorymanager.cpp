@@ -53,10 +53,10 @@ unsigned int MemoryManager::lookup(std::string id)
     }
 }
 
-void MemoryManager::start()
+void MemoryManager::start(std::atomic_bool& stopFlag)
 {
     auto& clock = Clock::getInstance();
-    while (true) // TODO: Stop flag
+    while (!stopFlag)
     {
         std::unique_lock requestLock(requestMutex);
         if (!requestQueue.empty())
