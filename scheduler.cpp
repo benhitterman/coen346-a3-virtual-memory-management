@@ -27,7 +27,7 @@ void Scheduler::operator()(std::atomic_bool &stopFlag)
 
             outFile << "Clock: " << clock.getTime() << ", Process " << cpuProcess->getId() << ": Started" << std::endl;
             runningProcesses.push_back(cpuProcess);
-            processThreads[cpuProcess->getId()] = new std::thread(&Process::runNextCommand, *cpuProcess);
+            processThreads[cpuProcess->getId()] = new std::thread(&Process::runNextCommand, cpuProcess);
         }
 
         // Check if any running process are finished

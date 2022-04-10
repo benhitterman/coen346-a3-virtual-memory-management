@@ -76,7 +76,7 @@ void MemoryManager::start()
                 case Request::Operation::Lookup:
                 {
                     Response resp = handleLookup(r);
-                    std::lock_guard(responseMutex);
+                    std::lock_guard responseLock(responseMutex);
                     responseList.push_back(resp);
                     break;
                 }
