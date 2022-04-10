@@ -16,11 +16,21 @@ void Scheduler::start(std::atomic_bool &stopFlag)
         Process *p = arrivalQueue.peek();
         arrivalQueue.pop();
         readyQueue.push(p);
+        outFile << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Arrived" << std::endl;
     }
     while (!stopFlag)
     {
+        // Check if new processes have arrived
+        while (!arrivalQueue.empty() && arrivalQueue.peek()->getArrivalTime() <= clock.getTime())
+        {
+            Process *p = arrivalQueue.peek();
+            arrivalQueue.pop();
+            readyQueue.push(p);
+            outFile << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Arrived" << std::endl;
+        }
+
         // Check for new processes to start
-        if (!readyQueue.empty() && runningProcesses.size() < numCores)
+        while (!readyQueue.empty() && runningProcesses.size() < numCores)
         {
             Process *cpuProcess = readyQueue.front();
             readyQueue.pop();

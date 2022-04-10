@@ -36,3 +36,5 @@
 
 # Output
 bin/
+output.txt
+vm.txt
