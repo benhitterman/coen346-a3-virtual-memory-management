@@ -1,3 +1,6 @@
+#ifndef NEXT_COMMAND_H
+#define NEXT_COMMAND_H
+
 #include <string>
 #include <vector>
 #include <mutex>
@@ -17,3 +20,5 @@ public:
     void findingListOfCommand(std::string);
     std::string getNextCommand();
 };
+
+#endif
