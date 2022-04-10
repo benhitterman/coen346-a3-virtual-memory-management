@@ -5,7 +5,7 @@ Scheduler::Scheduler(ProcessArrivalQueue &queue, int numCores)
 {
 }
 
-void Scheduler::operator()(std::atomic_bool &stopFlag)
+void Scheduler::start(std::atomic_bool &stopFlag)
 {
     Clock &clock = Clock::getInstance();
     std::ofstream outFile;

@@ -21,6 +21,6 @@ private:
 
 public:
     Scheduler(ProcessArrivalQueue &queue, int numCores);
-    void operator()(std::atomic_bool &stopFlag);
+    void start(std::atomic_bool &stopFlag);
 };
 #endif
