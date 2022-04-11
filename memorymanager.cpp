@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <fstream>
+#include <syncstream>
 #include <limits>
 
 #include "include/clock.h"
@@ -70,13 +71,16 @@ void MemoryManager::start(std::atomic_bool& stopFlag)
             {
                 case Request::Operation::Store:
                     handleStore(r);
+                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Store: Variable " << r.getId() << ", Value: " << r.getValue() << std::endl;
                     break;
                 case Request::Operation::Release:
                     handleRelease(r);
+                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Release: Variable " << r.getId() << std::endl;
                     break;
                 case Request::Operation::Lookup:
                 {
                     Response resp = handleLookup(r);
+                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Lookup: Variable " << r.getId() << ", Value: " << r.getValue() << std::endl;
                     std::lock_guard responseLock(responseMutex);
                     responseList.push_back(resp);
                     break;
@@ -179,6 +183,7 @@ Response MemoryManager::handleLookup(Request& r)
     if (targetIndex != std::numeric_limits<size_t>::max())
     {
         size_t victimIndex = findVictimIndex();
+        Page victim = mainMemory[victimIndex];
 
         // Create a new page object from the page to be moved into main memory then erase the line from the temp buffer.
         std::string targetLine = tempBuffer[targetIndex];
@@ -188,7 +193,7 @@ Response MemoryManager::handleLookup(Request& r)
 
         // Add the victim to the temp buffer and erase it from main memory.
         std::stringstream sstream;
-        sstream << mainMemory[victimIndex];
+        sstream << victim;
         tempBuffer.push_back(sstream.str());
         mainMemory.erase(mainMemory.begin() + victimIndex);
 
@@ -207,6 +212,7 @@ Response MemoryManager::handleLookup(Request& r)
             pageFile << i << std::endl;
         }
 
+        std::osyncstream(*outputFile) << "Clock: " << Clock::getInstance().getTime() << "Memory Manager, SWAP: Variable " << newPage.getId() << " with Variable " << victim.getId() << std::endl; 
         return Response(newPage.getId(), newPage.getValue());
     }
 
