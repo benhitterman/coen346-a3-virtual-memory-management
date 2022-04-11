@@ -7,7 +7,7 @@
 
 #include "include/clock.h"
 
-constexpr auto swapFile = "vm.txt";
+constexpr auto vmFile = "vm.txt";
 
 MemoryManager::MemoryManager(size_t maxPages, size_t k, int timeout, std::ofstream* outputFile)
     : maxPages(maxPages)
@@ -80,7 +80,7 @@ void MemoryManager::start(std::atomic_bool& stopFlag)
                 case Request::Operation::Lookup:
                 {
                     Response resp = handleLookup(r);
-                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Lookup: Variable " << r.getPageId() << ", Value: " << r.getValue() << std::endl;
+                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Lookup: Variable " << r.getPageId() << ", Value: " << resp.getValue() << std::endl;
                     std::lock_guard responseLock(responseMutex);
                     responseList.push_back(resp);
                     break;
@@ -100,7 +100,18 @@ void MemoryManager::start(std::atomic_bool& stopFlag)
 void MemoryManager::handleStore(Request& r)
 {
     Page newPage(r.getPageId(), r.getValue());
-    // Place the new page in main memory, if there's space.
+
+    // Check if the page exists in main memory and update it, if it does
+    for (size_t i = 0; i < mainMemory.size(); i++)
+    {
+        if (mainMemory[i].getId() == r.getPageId())
+        {
+            mainMemory[i] = newPage;
+            return;
+        }
+    }
+    
+    // If the page isn't in main memory but there's space, add it
     if (mainMemory.size() < maxPages)
     {
         int now = Clock::getInstance().getTime();
@@ -114,10 +125,26 @@ void MemoryManager::handleStore(Request& r)
         newPageHist[0] = now;
         hist[newPage.getId()] = newPageHist;
     }
-    else // Otherwise add the new page to the swap file.
+    else // Otherwise, check the virtual memory file
     {
-        std::fstream pageFile(swapFile, std::ios_base::app);
-        pageFile << newPage << std::endl;
+        auto tempBuffer = readVmFile();
+
+        // If the page is already in the file, remove it from the buffer
+        for (size_t i = 0; i < tempBuffer.size(); i++)
+        {
+            size_t space = tempBuffer[i].find(' ');
+            if (tempBuffer[i].substr(0, space) == r.getPageId())
+            {
+                tempBuffer.erase(tempBuffer.begin() + i);
+                break;
+            }
+        }
+        
+        // Append the new/updated page to the buffer and write it to the file
+        std::stringstream sstream;
+        sstream << newPage;
+        tempBuffer.push_back(sstream.str());
+        writeVmFile(tempBuffer);
     }
 }
 
@@ -132,24 +159,17 @@ void MemoryManager::handleRelease(Request& r)
         }
     }
 
-    std::fstream pageFile(swapFile);
-
-    std::vector<std::string> tempBuffer;
-    std::string line;
-    while (std::getline(pageFile, line))
+    auto tempBuffer = readVmFile();
+    for (size_t i = 0; i < tempBuffer.size(); i++)
     {
-        size_t space = line.find(' ');
-        if (line.substr(0, space) != r.getPageId())
+        size_t space = tempBuffer[i].find(' ');
+        if (tempBuffer[i].substr(0, space) == r.getPageId())
         {
-            tempBuffer.push_back(line);
+            tempBuffer.erase(tempBuffer.begin() + i);
+            break;
         }
     }
-
-    pageFile.seekp(0);
-    for (auto& i : tempBuffer)
-    {
-        pageFile << i << std::endl;
-    }
+    writeVmFile(tempBuffer);
 }
 
 Response MemoryManager::handleLookup(Request& r)
@@ -165,20 +185,17 @@ Response MemoryManager::handleLookup(Request& r)
     }
 
     // Not found in main memory: check vm.txt
-    std::fstream pageFile(swapFile);
-    std::vector<std::string> tempBuffer;
+    auto tempBuffer = readVmFile();
     // Default to an unrealistically large value
     size_t targetIndex = std::numeric_limits<size_t>::max();
-    std::string line;
-    while (std::getline(pageFile, line))
+    for (size_t i = 0; i < tempBuffer.size(); i++)
     {
-        size_t space = line.find(' ');
-        if (line.substr(0, space) == r.getPageId())
+        size_t space = tempBuffer[i].find(' ');
+        if (tempBuffer[i].substr(0, space) == r.getPageId())
         {
-            // If tempBuffer has size n, then indices 0..(n-1) are occupied and the next push will be index n.
-            targetIndex = tempBuffer.size();
+            targetIndex = i;
+            break;
         }
-        tempBuffer.push_back(line);
     }
 
     // We found the target in the page file, now we need to swap
@@ -208,11 +225,7 @@ Response MemoryManager::handleLookup(Request& r)
         hist[newPage.getId()] = newPageHist;
 
         // Write the temp buffer back into the file on disk.
-        pageFile.seekp(0);
-        for (auto& i : tempBuffer)
-        {
-            pageFile << i << std::endl;
-        }
+        writeVmFile(tempBuffer);
 
         std::osyncstream(*outputFile) << "Clock: " << Clock::getInstance().getTime() << ", Process " << r.getProcessId() << ", Memory Manager, SWAP: Variable " << newPage.getId() << " with Variable " << victim.getId() << std::endl; 
         return Response(r.getProcessId(), newPage.getId(), newPage.getValue());
@@ -296,5 +309,26 @@ size_t MemoryManager::findVictimIndex()
             }
         }
         return victimIndex;
+    }
+}
+
+std::vector<std::string> MemoryManager::readVmFile()
+{
+    std::ifstream vm(vmFile);
+    std::vector<std::string> tempBuffer;
+    std::string line;
+    while (std::getline(vm, line))
+    {
+        tempBuffer.push_back(line);
+    }
+    return tempBuffer;
+}
+
+void MemoryManager::writeVmFile(std::vector<std::string>& buffer)
+{
+    std::ofstream vm(vmFile, std::ios_base::trunc);
+    for (auto& i : buffer)
+    {
+        vm << i << std::endl;
     }
 }

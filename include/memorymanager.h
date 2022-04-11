@@ -32,6 +32,8 @@ private:
 
     void updateTimestamps(Page& p);
     size_t findVictimIndex();
+    std::vector<std::string> readVmFile();
+    void writeVmFile(std::vector<std::string>& buffer);
 
     const size_t maxPages;
     const size_t k;
