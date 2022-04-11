@@ -34,7 +34,7 @@ void Clock::start()
         std::this_thread::sleep_for(std::chrono::milliseconds(cycleLength));
         // Get a unique lock that blocks all readers while the increment happens
         std::unique_lock writerLock(mutex);
-        time++;
+        time += cycleIncrement;
         std::cout << time << std::endl;
     }
 }
