@@ -2,6 +2,7 @@
 #define MEMORY_MANAGER_H
 
 #include <atomic>
+#include <fstream>
 #include <map>
 #include <mutex>
 #include <queue>
@@ -15,7 +16,7 @@
 class MemoryManager
 {
 public:
-    MemoryManager(size_t maxPages, size_t k, int timeout);
+    MemoryManager(size_t maxPages, size_t k, int timeout, std::ofstream* outputFile);
 
     void store(std::string id, unsigned int value);
     void release(std::string id);
@@ -35,6 +36,8 @@ private:
     const size_t maxPages;
     const size_t k;
     const int timeout;
+
+    std::ofstream* outputFile;
 
     std::mutex requestMutex;
     std::queue<Request> requestQueue;

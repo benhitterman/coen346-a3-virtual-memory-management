@@ -6,6 +6,7 @@
 #include <thread>
 #include <atomic>
 #include <fstream>
+#include <syncstream>
 #include "process.h"
 #include "processarrivalqueue.h"
 #include "clock.h"
@@ -18,9 +19,10 @@ private:
     std::vector<Process *> runningProcesses;
     std::map<int, std::thread *> processThreads;
     int numCores;
+    std::ofstream* outputFile;
 
 public:
-    Scheduler(ProcessArrivalQueue &queue, int numCores);
+    Scheduler(ProcessArrivalQueue &queue, int numCores, std::ofstream* outputFile);
     void start(std::atomic_bool &stopFlag);
 };
 #endif

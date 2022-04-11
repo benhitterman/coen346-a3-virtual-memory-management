@@ -21,7 +21,9 @@ int main()
     size_t maxPages, k;
     int timeout;
     myfile >> maxPages >> k >> timeout;
-    MemoryManager *memory = new MemoryManager(maxPages, k, timeout);
+
+    std::ofstream outFile("output.txt");
+    MemoryManager *memory = new MemoryManager(maxPages, k, timeout, &outFile);
     myfile.close();
 
     // Reading Commands text
@@ -50,7 +52,7 @@ int main()
     myfile.close();
     Clock &clock = Clock::getInstance();
     ProcessArrivalQueue queue(processList);
-    Scheduler scheduler(queue, numOfCores);
+    Scheduler scheduler(queue, numOfCores, &outFile);
 
     std::atomic_bool stopFlag;
     std::thread clockThread(&Clock::start, &clock);

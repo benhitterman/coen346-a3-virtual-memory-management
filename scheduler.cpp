@@ -1,22 +1,20 @@
 #include "include/scheduler.h"
 
-Scheduler::Scheduler(ProcessArrivalQueue &queue, int numCores)
-    : arrivalQueue(queue), numCores(numCores)
+Scheduler::Scheduler(ProcessArrivalQueue &queue, int numCores, std::ofstream* outputFile)
+    : arrivalQueue(queue), numCores(numCores), outputFile(outputFile)
 {
 }
 
 void Scheduler::start(std::atomic_bool &stopFlag)
 {
     Clock &clock = Clock::getInstance();
-    std::ofstream outFile;
-    outFile.open("output.txt");
 
     while (!arrivalQueue.empty() && arrivalQueue.peek()->getArrivalTime() == 0)
     {
         Process *p = arrivalQueue.peek();
         arrivalQueue.pop();
         readyQueue.push(p);
-        outFile << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Arrived" << std::endl;
+        std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Arrived" << std::endl;
     }
     while (!stopFlag)
     {
@@ -26,7 +24,7 @@ void Scheduler::start(std::atomic_bool &stopFlag)
             Process *p = arrivalQueue.peek();
             arrivalQueue.pop();
             readyQueue.push(p);
-            outFile << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Arrived" << std::endl;
+            std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Arrived" << std::endl;
         }
 
         // Check for new processes to start
@@ -35,7 +33,7 @@ void Scheduler::start(std::atomic_bool &stopFlag)
             Process *cpuProcess = readyQueue.front();
             readyQueue.pop();
 
-            outFile << "Clock: " << clock.getTime() << ", Process " << cpuProcess->getId() << ": Started" << std::endl;
+            std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << cpuProcess->getId() << ": Started" << std::endl;
             runningProcesses.push_back(cpuProcess);
             processThreads[cpuProcess->getId()] = new std::thread(&Process::runNextCommand, cpuProcess);
         }
@@ -52,7 +50,7 @@ void Scheduler::start(std::atomic_bool &stopFlag)
         for (auto i : terminatedIndices)
         {
             Process* p = runningProcesses[i];
-            outFile << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Finished" << std::endl;
+            std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << p->getId() << ": Finished" << std::endl;
 
             runningProcesses.erase(runningProcesses.begin() + i);
 

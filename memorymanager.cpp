@@ -8,10 +8,11 @@
 
 constexpr auto swapFile = "vm.txt";
 
-MemoryManager::MemoryManager(size_t maxPages, size_t k, int timeout)
+MemoryManager::MemoryManager(size_t maxPages, size_t k, int timeout, std::ofstream* outputFile)
     : maxPages(maxPages)
     , k(k)
     , timeout(timeout)
+    , outputFile(outputFile)
 {
 }
 
