@@ -5,7 +5,7 @@
 #include <thread>
 
 Process::Process(int id, int arrivalTime, int burstTime, nextCommand *nc1, MemoryManager *mm1)
-    : id(id), arrivalTime(arrivalTime), burstTime(burstTime), nc1(nc1), mm1(mm1)
+    : id(id), arrivalTime(arrivalTime), burstTime(burstTime), nc1(nc1), mm1(mm1), isTerminated(false)
 {
 }
 
@@ -33,18 +33,10 @@ void Process::runNextCommand()
 {
     std::string command;
     Clock &clock = Clock::getInstance();
-    int runningTime = 0;
+    int processEndTime = clock.getTime() + burstTime;
     int sleepTime, endTime;
-    int lastTimeCheck, currentTimeCheck;
-    lastTimeCheck = clock.getTime();
-    while (runningTime < burstTime)
+    while (clock.getTime() < processEndTime)
     {
-        // First, check if the clock has incremented and increase the running time if so.
-        if ((currentTimeCheck = clock.getTime()) > lastTimeCheck)
-        {
-            runningTime++;
-            lastTimeCheck = currentTimeCheck;
-        }
         command = nc1->getNextCommand();
         // parsing command
         size_t firstWhitespace = command.find(" ");
@@ -61,8 +53,8 @@ void Process::runNextCommand()
             mm1->release(value1);
 
         sleepTime = rand() % 1000 + 100; // random value between 100 and 1000
-        endTime = currentTimeCheck + sleepTime;
-        while (clock.getTime() < endTime)
+        endTime = clock.getTime() + sleepTime;
+        while (clock.getTime() < endTime && clock.getTime() < processEndTime)
             std::this_thread::sleep_for(std::chrono::milliseconds(Clock::pollingInterval));
     }
     isTerminated = true;
