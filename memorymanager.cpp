@@ -17,25 +17,25 @@ MemoryManager::MemoryManager(size_t maxPages, size_t k, int timeout, std::ofstre
 {
 }
 
-void MemoryManager::store(std::string id, unsigned int value)
+void MemoryManager::store(std::string processId, std::string pageId, unsigned int value)
 {
     // Push a new store request into the queue, then return.
     std::lock_guard lock(requestMutex);
-    requestQueue.push(Request(Request::Operation::Store, id, value));
+    requestQueue.push(Request(Request::Operation::Store, processId, pageId, value));
 }
 
-void MemoryManager::release(std::string id)
+void MemoryManager::release(std::string processId, std::string pageId)
 {
     // Push a new release request into the queue, then return.
     std::lock_guard lock(requestMutex);
-    requestQueue.push(Request(Request::Operation::Release, id));
+    requestQueue.push(Request(Request::Operation::Release, processId, pageId));
 }
 
-unsigned int MemoryManager::lookup(std::string id)
+unsigned int MemoryManager::lookup(std::string processId, std::string pageId)
 {
     // Push a new lookup request into the queue.
     std::unique_lock requestLock(requestMutex);
-    requestQueue.push(Request(Request::Operation::Lookup, id));
+    requestQueue.push(Request(Request::Operation::Lookup, processId, pageId));
     requestLock.unlock();
 
     // Busy-wait until our response has been added into the response list.
@@ -44,7 +44,7 @@ unsigned int MemoryManager::lookup(std::string id)
         std::lock_guard responseLock(responseMutex);
         for (size_t i = 0; i < responseList.size(); i++)
         {
-            if (responseList[i].getId() == id)
+            if (responseList[i].getProcessId() == processId)
             {
                 auto retVal = responseList[i].getValue();
                 responseList.erase(responseList.begin() + i);
@@ -71,16 +71,16 @@ void MemoryManager::start(std::atomic_bool& stopFlag)
             {
                 case Request::Operation::Store:
                     handleStore(r);
-                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Store: Variable " << r.getId() << ", Value: " << r.getValue() << std::endl;
+                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Store: Variable " << r.getPageId() << ", Value: " << r.getValue() << std::endl;
                     break;
                 case Request::Operation::Release:
                     handleRelease(r);
-                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Release: Variable " << r.getId() << std::endl;
+                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Release: Variable " << r.getPageId() << std::endl;
                     break;
                 case Request::Operation::Lookup:
                 {
                     Response resp = handleLookup(r);
-                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Lookup: Variable " << r.getId() << ", Value: " << r.getValue() << std::endl;
+                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Lookup: Variable " << r.getPageId() << ", Value: " << r.getValue() << std::endl;
                     std::lock_guard responseLock(responseMutex);
                     responseList.push_back(resp);
                     break;
@@ -99,7 +99,7 @@ void MemoryManager::start(std::atomic_bool& stopFlag)
 
 void MemoryManager::handleStore(Request& r)
 {
-    Page newPage(r.getId(), r.getValue());
+    Page newPage(r.getPageId(), r.getValue());
     // Place the new page in main memory, if there's space.
     if (mainMemory.size() < maxPages)
     {
@@ -125,7 +125,7 @@ void MemoryManager::handleRelease(Request& r)
 {
     for (size_t i = 0; i < mainMemory.size(); i++)
     {
-        if (mainMemory[i].getId() == r.getId())
+        if (mainMemory[i].getId() == r.getPageId())
         {
             mainMemory.erase(mainMemory.begin() + i);
             return;
@@ -139,7 +139,7 @@ void MemoryManager::handleRelease(Request& r)
     while (std::getline(pageFile, line))
     {
         size_t space = line.find(' ');
-        if (line.substr(0, space) != r.getId())
+        if (line.substr(0, space) != r.getPageId())
         {
             tempBuffer.push_back(line);
         }
@@ -154,15 +154,17 @@ void MemoryManager::handleRelease(Request& r)
 
 Response MemoryManager::handleLookup(Request& r)
 {
+    // Check main memory first
     for (size_t i = 0; i < mainMemory.size(); i++)
     {
-        if (mainMemory[i].getId() == r.getId())
+        if (mainMemory[i].getId() == r.getPageId())
         {
             updateTimestamps(mainMemory[i]);
-            return Response(mainMemory[i].getId(), mainMemory[i].getValue());
+            return Response(r.getProcessId(), r.getPageId(), mainMemory[i].getValue());
         }
     }
 
+    // Not found in main memory: check vm.txt
     std::fstream pageFile(swapFile);
     std::vector<std::string> tempBuffer;
     // Default to an unrealistically large value
@@ -171,7 +173,7 @@ Response MemoryManager::handleLookup(Request& r)
     while (std::getline(pageFile, line))
     {
         size_t space = line.find(' ');
-        if (line.substr(0, space) == r.getId())
+        if (line.substr(0, space) == r.getPageId())
         {
             // If tempBuffer has size n, then indices 0..(n-1) are occupied and the next push will be index n.
             targetIndex = tempBuffer.size();
@@ -212,12 +214,12 @@ Response MemoryManager::handleLookup(Request& r)
             pageFile << i << std::endl;
         }
 
-        std::osyncstream(*outputFile) << "Clock: " << Clock::getInstance().getTime() << "Memory Manager, SWAP: Variable " << newPage.getId() << " with Variable " << victim.getId() << std::endl; 
-        return Response(newPage.getId(), newPage.getValue());
+        std::osyncstream(*outputFile) << "Clock: " << Clock::getInstance().getTime() << " Memory Manager, SWAP: Variable " << newPage.getId() << " with Variable " << victim.getId() << std::endl; 
+        return Response(r.getProcessId(), newPage.getId(), newPage.getValue());
     }
 
     // If the id wasn't found in main memory or in the page file, return -1.
-    return Response(r.getId(), -1);
+    return Response(r.getProcessId(), r.getPageId(), -1);
 }
 
 void MemoryManager::updateTimestamps(Page& p)

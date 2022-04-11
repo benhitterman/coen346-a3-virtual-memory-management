@@ -7,13 +7,15 @@
 class Response
 {
 public:
-    Response(std::string id, unsigned int value);
+    Response(std::string processId, std::string pageId, unsigned int value);
 
-    std::string getId() const;
+    std::string getProcessId() const;
+    std::string getPageId() const;
     unsigned int getValue() const;
     
 private:
-    std::string id;
+    std::string processId;
+    std::string pageId;
     unsigned int value;
 };
 
