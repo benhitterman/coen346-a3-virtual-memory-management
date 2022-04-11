@@ -45,12 +45,12 @@ void Process::runNextCommand()
         if (argument == "Store")
         {
             unsigned int value2 = stoi(command.substr(firstWhitespace + 3, 1));
-            mm1->store(value1, value2);
+            mm1->store(id, value1, value2);
         }
         else if (argument == "Lookup")
-            mm1->lookup(value1);
+            mm1->lookup(id, value1);
         else if (argument == "Release")
-            mm1->release(value1);
+            mm1->release(id, value1);
 
         sleepTime = rand() % 1000 + 100; // random value between 100 and 1000
         endTime = clock.getTime() + sleepTime;

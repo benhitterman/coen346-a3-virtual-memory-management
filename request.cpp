@@ -1,6 +1,6 @@
 #include "include/request.h"
 
-Request::Request(Operation op, std::string processId, std::string pageId, unsigned int value)
+Request::Request(Operation op, int processId, std::string pageId, unsigned int value)
     : operation(op)
     , processId(processId)
     , pageId(pageId)
@@ -13,7 +13,7 @@ Request::Operation Request::getOperation() const
     return operation;
 }
 
-std::string Request::getProcessId() const
+int Request::getProcessId() const
 {
     return processId;
 }

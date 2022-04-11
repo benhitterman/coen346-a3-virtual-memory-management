@@ -18,9 +18,9 @@ class MemoryManager
 public:
     MemoryManager(size_t maxPages, size_t k, int timeout, std::ofstream* outputFile);
 
-    void store(std::string processId, std::string pageId, unsigned int value);
-    void release(std::string processId, std::string pageId);
-    unsigned int lookup(std::string processId, std::string pageId);
+    void store(int processId, std::string pageId, unsigned int value);
+    void release(int processId, std::string pageId);
+    unsigned int lookup(int processId, std::string pageId);
 
     // Runs the memory manager. Should be started in a thread.
     void start(std::atomic_bool& stopFlag);

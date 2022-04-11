@@ -14,16 +14,16 @@ public:
         Lookup
     };
 
-    Request(Operation op, std::string processId, std::string pageId, unsigned int value = 0);
+    Request(Operation op, int processId, std::string pageId, unsigned int value = 0);
 
     Operation getOperation() const;
-    std::string getProcessId() const;
+    int getProcessId() const;
     std::string getPageId() const;
     unsigned int getValue() const;
 
 private:
     Operation operation;
-    std::string processId;
+    int processId;
     std::string pageId;
     unsigned int value;
 };

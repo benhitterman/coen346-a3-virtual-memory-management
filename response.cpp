@@ -1,11 +1,11 @@
 #include "include/response.h"
 
-Response::Response(std::string processId, std::string pageId, unsigned int value)
+Response::Response(int processId, std::string pageId, unsigned int value)
     : processId(processId), pageId(pageId), value(value)
 {
 }
 
-std::string Response::getProcessId() const
+int Response::getProcessId() const
 {
     return processId;
 }

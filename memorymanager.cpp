@@ -17,21 +17,21 @@ MemoryManager::MemoryManager(size_t maxPages, size_t k, int timeout, std::ofstre
 {
 }
 
-void MemoryManager::store(std::string processId, std::string pageId, unsigned int value)
+void MemoryManager::store(int processId, std::string pageId, unsigned int value)
 {
     // Push a new store request into the queue, then return.
     std::lock_guard lock(requestMutex);
     requestQueue.push(Request(Request::Operation::Store, processId, pageId, value));
 }
 
-void MemoryManager::release(std::string processId, std::string pageId)
+void MemoryManager::release(int processId, std::string pageId)
 {
     // Push a new release request into the queue, then return.
     std::lock_guard lock(requestMutex);
     requestQueue.push(Request(Request::Operation::Release, processId, pageId));
 }
 
-unsigned int MemoryManager::lookup(std::string processId, std::string pageId)
+unsigned int MemoryManager::lookup(int processId, std::string pageId)
 {
     // Push a new lookup request into the queue.
     std::unique_lock requestLock(requestMutex);
@@ -214,7 +214,7 @@ Response MemoryManager::handleLookup(Request& r)
             pageFile << i << std::endl;
         }
 
-        std::osyncstream(*outputFile) << "Clock: " << Clock::getInstance().getTime() << " Memory Manager, SWAP: Variable " << newPage.getId() << " with Variable " << victim.getId() << std::endl; 
+        std::osyncstream(*outputFile) << "Clock: " << Clock::getInstance().getTime() << ", Process " << r.getProcessId() << ", Memory Manager, SWAP: Variable " << newPage.getId() << " with Variable " << victim.getId() << std::endl; 
         return Response(r.getProcessId(), newPage.getId(), newPage.getValue());
     }
 
