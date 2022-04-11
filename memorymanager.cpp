@@ -17,28 +17,14 @@ MemoryManager::MemoryManager(size_t maxPages, size_t k, int timeout, std::ofstre
 {
 }
 
-void MemoryManager::store(int processId, std::string pageId, unsigned int value)
+void MemoryManager::submitRequest(Request r)
 {
-    // Push a new store request into the queue, then return.
     std::lock_guard lock(requestMutex);
-    requestQueue.push(Request(Request::Operation::Store, processId, pageId, value));
+    requestQueue.push(r);
 }
 
-void MemoryManager::release(int processId, std::string pageId)
+Response MemoryManager::getResponse(int processId)
 {
-    // Push a new release request into the queue, then return.
-    std::lock_guard lock(requestMutex);
-    requestQueue.push(Request(Request::Operation::Release, processId, pageId));
-}
-
-unsigned int MemoryManager::lookup(int processId, std::string pageId)
-{
-    // Push a new lookup request into the queue.
-    std::unique_lock requestLock(requestMutex);
-    requestQueue.push(Request(Request::Operation::Lookup, processId, pageId));
-    requestLock.unlock();
-
-    // Busy-wait until our response has been added into the response list.
     while (true)
     {
         std::lock_guard responseLock(responseMutex);
@@ -46,7 +32,7 @@ unsigned int MemoryManager::lookup(int processId, std::string pageId)
         {
             if (responseList[i].getProcessId() == processId)
             {
-                auto retVal = responseList[i].getValue();
+                auto retVal = responseList[i];
                 responseList.erase(responseList.begin() + i);
                 return retVal;
             }
@@ -71,16 +57,13 @@ void MemoryManager::start(std::atomic_bool& stopFlag)
             {
                 case Request::Operation::Store:
                     handleStore(r);
-                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Store: Variable " << r.getPageId() << ", Value: " << r.getValue() << std::endl;
                     break;
                 case Request::Operation::Release:
                     handleRelease(r);
-                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Release: Variable " << r.getPageId() << std::endl;
                     break;
                 case Request::Operation::Lookup:
                 {
                     Response resp = handleLookup(r);
-                    std::osyncstream(*outputFile) << "Clock: " << clock.getTime() << ", Process " << r.getProcessId() << ", Lookup: Variable " << r.getPageId() << ", Value: " << resp.getValue() << std::endl;
                     std::lock_guard responseLock(responseMutex);
                     responseList.push_back(resp);
                     break;

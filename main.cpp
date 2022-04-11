@@ -47,7 +47,7 @@ int main()
     for (int i = 0; i < numOfProcess; i++)
     {
         myfile >> arrivalTime >> burstTime;
-        processList.push_back(new Process(i + 1, arrivalTime, burstTime, commands, memory));
+        processList.push_back(new Process(i + 1, arrivalTime, burstTime, commands, memory, &outFile));
     }
     myfile.close();
     Clock &clock = Clock::getInstance();
